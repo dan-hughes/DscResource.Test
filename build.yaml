@@ -9,19 +9,36 @@ CopyPaths:
   - Config
   - tasks
 Encoding: UTF8
-
 VersionedOutputDirectory: true
 
+ModuleBuildTasks:
+  Sampler:
+    - "*.build.Sampler.ib.tasks"
+  Sampler.GitHubTasks:
+    - "*.ib.tasks"
+
+# Invoke-Build Header to be used to 'decorate' the terminal output of the tasks.
+TaskHeader: |
+  param($Path)
+  ""
+  "=" * 79
+  Write-Build Cyan "`t`t`t$($Task.Name.replace("_"," ").ToUpper())"
+  Write-Build DarkGray  "$(Get-BuildSynopsis $Task)"
+  "-" * 79
+  Write-Build DarkGray "  $Path"
+  Write-Build DarkGray "  $($Task.InvocationInfo.ScriptName):$($Task.InvocationInfo.ScriptLineNumber)"
+  ""
+
 AliasesToExport:
-  - 'Task.Invoke_HQRM_Tests'
-  - 'Task.Fail_Build_If_HQRM_Tests_Failed'
-  - 'Task.Invoke_HQRM_Tests_Stop_On_Fail'
+  - "Task.Invoke_HQRM_Tests"
+  - "Task.Fail_Build_If_HQRM_Tests_Failed"
+  - "Task.Invoke_HQRM_Tests_Stop_On_Fail"
 
 ####################################################
 #       Sampler Pipeline Configuration             #
 ####################################################
 BuildWorkflow:
-  '.':
+  ".":
     - build
     - test
 
@@ -90,49 +107,40 @@ BuildWorkflow:
 ####################################################
 
 Pester:
-  OutputFormat: NUnitXML
+  Configuration:
+    Run:
+      Path:
+        - tests/QA
+        - tests/Unit
+    Output:
+      Verbosity: Detailed
+      StackTraceVerbosity: Full
+      CIFormat: Auto
+    CodeCoverage:
+      CoveragePercentTarget: 80
+      OutputPath: JaCoCo_Merge.xml # the file that is created for each pipeline test job
+      OutputEncoding: ascii
+      UseBreakpoints: false
+    TestResult:
+      OutputFormat: NUnitXML
+      OutputEncoding: acsii
+  ExcludeTag:
+    - helpQuality
+    - testQuality
+  ExcludeSourceFile:
+    - source/potential
   ExcludeFromCodeCoverage:
     - tasks
     - Template
     - Tests
-  Script:
-    - tests/QA
-    - tests/Unit/
-  CodeCoverageThreshold: 50
-  CodeCoverageOutputFile: JaCoCo_Merge.xml # the file that is created for each pipeline test job
-  CodeCoverageOutputFileEncoding: ascii
-  ExcludeTag:
-    - helpQuality
-    - testQuality
-  Tag:
-  ExcludeSourceFile:
-    - source/potential
 
 CodeCoverage:
   CodeCoverageFilePattern: JaCoCo_Merge.xml # the pattern used to search all pipeline test job artifacts
   CodeCoverageMergedOutputFile: JaCoCo_coverage.xml # the file that is created for the merged code coverage
 
-ModuleBuildTasks:
-  Sampler:
-    - '*.build.Sampler.ib.tasks'
-  Sampler.GitHubTasks:
-    - '*.ib.tasks'
-
-# Invoke-Build Header to be used to 'decorate' the terminal output of the tasks.
-TaskHeader: |
-  param($Path)
-  ""
-  "=" * 79
-  Write-Build Cyan "`t`t`t$($Task.Name.replace("_"," ").ToUpper())"
-  Write-Build DarkGray  "$(Get-BuildSynopsis $Task)"
-  "-" * 79
-  Write-Build DarkGray "  $Path"
-  Write-Build DarkGray "  $($Task.InvocationInfo.ScriptName):$($Task.InvocationInfo.ScriptLineNumber)"
-  ""
-
 GitHubConfig:
   GitHubFilesToAdd:
-    - 'CHANGELOG.md'
+    - "CHANGELOG.md"
   GitHubConfigUserName: dscbot
   GitHubConfigUserEmail: dsccommunity@outlook.com
   UpdateChangelogOnPrerelease: false
