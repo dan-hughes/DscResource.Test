@@ -185,6 +185,8 @@ function Initialize-TestEnvironment
         $oldPSModulePathSplit = $null
     }
 
+    $newPSModulePathSplit = $null
+
     if ($oldPSModulePathSplit -ccontains $moduleParentFilePath)
     {
         # Remove the existing module path from the new PSModulePath
