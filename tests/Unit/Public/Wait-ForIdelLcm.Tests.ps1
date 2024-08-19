@@ -25,63 +25,55 @@ BeforeDiscovery {
 }
 
 BeforeAll {
-    $ProjectPath = "$PSScriptRoot\..\..\.." | Convert-Path
-    $script:ProjectName = ((Get-ChildItem -Path $ProjectPath\*\*.psd1).Where{
-            ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
-            $(try
-                {
-                    Test-ModuleManifest $_.FullName -ErrorAction Stop
-                }
-                catch
-                {
-                    $false
-                } )
-        }).BaseName
+    $script:moduleName = 'DscResource.Test'
 
+    # Make sure there are not other modules imported that will conflict with mocks.
+    Get-Module -Name $script:moduleName -All | Remove-Module -Force
 
-    Import-Module $script:ProjectName -Force
+    # Re-import the module using force to get any code changes between runs.
+    Import-Module -Name $script:moduleName -Force -ErrorAction 'Stop'
 
-    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:ProjectName
-    $PSDefaultParameterValues['Mock:ModuleName'] = $script:ProjectName
-    $PSDefaultParameterValues['Should:ModuleName'] = $script:ProjectName
-}
+    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Mock:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Should:ModuleName'] = $script:moduleName
 
-AfterAll {
-    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
-    $PSDefaultParameterValues.Remove('Mock:ModuleName')
-    $PSDefaultParameterValues.Remove('Should:ModuleName')
-
-    # Unload the module being tested so that it doesn't impact any other tests.
-    Get-Module -Name $script:ProjectName -All | Remove-Module -Force
-}
-
-Describe 'Wait-ForIdleLcm' -Tag 'WaitForIdleLcm' {
-    BeforeAll {
+    $stubModuleName = 'DscResource.Test.Stubs'
+    Remove-Module -Name $stubModuleName -Force -ErrorAction 'SilentlyContinue'
+    New-Module -Name $stubModuleName -ScriptBlock {
         <#
             Stub for Get-DscLocalConfigurationManager since it is not available
             cross-platform.
         #>
         function Get-DscLocalConfigurationManager
         {
-            [CmdletBinding()]
-            param ()
-
-            throw '{0}: StubNotImplemented' -f $MyInvocation.MyCommand
         }
-    }
 
-    AfterAll {
-        Remove-Item -Path 'function:Get-DscLocalConfigurationManager'
-    }
+    } | Import-Module
+}
 
+AfterAll {
+    $PSDefaultParameterValues.Remove('Mock:ModuleName')
+    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
+    $PSDefaultParameterValues.Remove('Should:ModuleName')
+
+    Remove-Module -Name $script:moduleName
+
+    <#
+        This removes the stub module that was imported in the
+        BeforeAll-block.
+    #>
+    Remove-Module -Name 'DscResource.Test.Stubs' -Force -ErrorAction 'SilentlyContinue'
+}
+
+Describe 'Public\Wait-ForIdleLcm' {
     Context 'When the LCM is idle' {
         BeforeAll {
-            Mock -CommandName Start-Sleep -ModuleName $ProjectName
+            Mock -CommandName Start-Sleep
             Mock -CommandName Get-DscLocalConfigurationManager -MockWith {
                 return @{
                     LCMState = 'Idle'
                 }
-            } -ModuleName $ProjectName
+            }
         }
 
         It 'Should not throw and call the expected mocks' {
@@ -91,8 +83,8 @@ Describe 'Wait-ForIdleLcm' -Tag 'WaitForIdleLcm' {
                 { Wait-ForIdleLcm } | Should -Not -Throw
             }
 
-            Should -Invoke -CommandName Get-DscLocalConfigurationManager -Exactly -Times 1 -Scope It -ModuleName $ProjectName
-            Should -Invoke -CommandName Start-Sleep -Exactly -Times 0 -Scope It -ModuleName $ProjectName
+            Should -Invoke -CommandName Get-DscLocalConfigurationManager -Exactly -Times 1 -Scope It
+            Should -Invoke -CommandName Start-Sleep -Exactly -Times 0 -Scope It
         }
     }
 
@@ -128,7 +120,7 @@ Describe 'Wait-ForIdleLcm' -Tag 'WaitForIdleLcm' {
             InModuleScope -ScriptBlock {
                 Set-StrictMode -Version 1.0
 
-            { Wait-ForIdleLcm } | Should -Not -Throw
+                { Wait-ForIdleLcm } | Should -Not -Throw
             }
 
             Should -Invoke -CommandName Get-DscLocalConfigurationManager -Exactly -Times 2 -Scope It
