@@ -82,7 +82,7 @@ AfterAll {
     Remove-Module -Name 'DscResource.Test.Stubs' -Force -ErrorAction 'SilentlyContinue'
 }
 
-Describe 'New-DscSelfSignedCertificate' -Tag WindowsOnly {
+Describe 'Public\New-DscSelfSignedCertificate' -Tag WindowsOnly {
     BeforeAll {
         $mockCertificateDNSNames = @('TestDscEncryptionCert')
         $mockCertificateKeyUsage = @('KeyEncipherment', 'DataEncipherment')
