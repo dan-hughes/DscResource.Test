@@ -25,37 +25,28 @@ BeforeDiscovery {
 }
 
 BeforeAll {
-    $ProjectPath = "$PSScriptRoot\..\..\.." | Convert-Path
-    $script:ProjectName = ((Get-ChildItem -Path $ProjectPath\*\*.psd1).Where{
-            ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
-            $(try
-                {
-                    Test-ModuleManifest $_.FullName -ErrorAction Stop
-                }
-                catch
-                {
-                    $false
-                } )
-        }).BaseName
+    $script:moduleName = 'DscResource.Test'
 
+    # Make sure there are not other modules imported that will conflict with mocks.
+    Get-Module -Name $script:moduleName -All | Remove-Module -Force
 
-    Import-Module $script:ProjectName -Force
+    # Re-import the module using force to get any code changes between runs.
+    Import-Module -Name $script:moduleName -Force -ErrorAction 'Stop'
 
-    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:ProjectName
-    $PSDefaultParameterValues['Mock:ModuleName'] = $script:ProjectName
-    $PSDefaultParameterValues['Should:ModuleName'] = $script:ProjectName
+    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Mock:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Should:ModuleName'] = $script:moduleName
 }
 
 AfterAll {
-    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
     $PSDefaultParameterValues.Remove('Mock:ModuleName')
+    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
     $PSDefaultParameterValues.Remove('Should:ModuleName')
 
-    # Unload the module being tested so that it doesn't impact any other tests.
-    Get-Module -Name $script:ProjectName -All | Remove-Module -Force
+    Remove-Module -Name $script:moduleName
 }
 
-Describe 'Test-ModuleContainsClassResource' {
+Describe 'Private\Test-ModuleContainsClassResource' {
     BeforeAll {
         $filePath = (Join-Path -Path $TestDrive -ChildPath 'test.psm1')
         'testfile' | Out-File -FilePath $filePath -Encoding ascii
@@ -112,7 +103,7 @@ Describe 'Test-ModuleContainsClassResource' {
                 $result = Test-ModuleContainsClassResource -ModulePath $TestDrive
                 $result | Should -BeFalse
             }
-            
+
             Should -Invoke -CommandName 'Get-Psm1FileList' -Exactly -Times 1 -Scope It
             Should -Invoke -CommandName 'Test-FileContainsClassResource' -Exactly -Times 0 -Scope It
         }
