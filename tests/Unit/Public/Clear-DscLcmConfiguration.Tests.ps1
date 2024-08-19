@@ -1,35 +1,86 @@
-# $ProjectPath = "$PSScriptRoot\..\..\.." | Convert-Path
-# $ProjectName = ((Get-ChildItem -Path $ProjectPath\*\*.psd1).Where{
-#         ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
-#         $(try { Test-ModuleManifest $_.FullName -ErrorAction Stop } catch { $false } )
-#     }).BaseName
+# Suppressing this rule because Script Analyzer does not understand Pester's syntax.
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param ()
+
+BeforeDiscovery {
+    try
+    {
+        if (-not (Get-Module -Name 'DscResource.Test'))
+        {
+            # Assumes dependencies has been resolved, so if this module is not available, run 'noop' task.
+            if (-not (Get-Module -Name 'DscResource.Test' -ListAvailable))
+            {
+                # Redirect all streams to $null, except the error stream (stream 2)
+                & "$PSScriptRoot/../../../build.ps1" -Tasks 'noop' 2>&1 4>&1 5>&1 6>&1 > $null
+            }
+
+            # If the dependencies has not been resolved, this will throw an error.
+            Import-Module -Name 'DscResource.Test' -Force -ErrorAction 'Stop'
+        }
+    }
+    catch [System.IO.FileNotFoundException]
+    {
+        throw 'DscResource.Test module dependency not found. Please run ".\build.ps1 -ResolveDependency -Tasks build" first.'
+    }
+}
+
+BeforeAll {
+    $ProjectPath = "$PSScriptRoot\..\..\.." | Convert-Path
+    $script:ProjectName = ((Get-ChildItem -Path $ProjectPath\*\*.psd1).Where{
+            ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
+            $(try
+                {
+                    Test-ModuleManifest $_.FullName -ErrorAction Stop
+                }
+                catch
+                {
+                    $false
+                } )
+        }).BaseName
 
 
-# Import-Module $ProjectName -Force
+    Import-Module $script:ProjectName -Force
 
-# InModuleScope $ProjectName {
-#     Describe 'Clear-DscLcmConfiguration' {
+    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:ProjectName
+    $PSDefaultParameterValues['Mock:ModuleName'] = $script:ProjectName
+    $PSDefaultParameterValues['Should:ModuleName'] = $script:ProjectName
+}
 
-#         Context 'When clearing the DSC LCM' {
-#             It 'Should reset the LCM without throwing' -Skip:($PSVersionTable.PSVersion.Major -gt 5 ) {
-#                 Mock -CommandName 'Remove-DscConfigurationDocument'
-#                 Mock -CommandName 'Stop-DscConfiguration'
-#                 { Clear-DscLcmConfiguration } | Should -Not -Throw
+AfterAll {
+    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
+    $PSDefaultParameterValues.Remove('Mock:ModuleName')
+    $PSDefaultParameterValues.Remove('Should:ModuleName')
 
-#                 Assert-MockCalled -CommandName 'Stop-DscConfiguration' -Exactly -Times 1 -Scope It
-#                 Assert-MockCalled -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
-#                     $Stage -eq 'Current'
-#                 } -Exactly -Times 1 -Scope It
+    # Unload the module being tested so that it doesn't impact any other tests.
+    Get-Module -Name $script:ProjectName -All | Remove-Module -Force
+}
 
-#                 Assert-MockCalled -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
-#                     $Stage -eq 'Pending'
-#                 } -Exactly -Times 1 -Scope It
+Describe 'Clear-DscLcmConfiguration' {
+    Context 'When clearing the DSC LCM' {
+        BeforeAll {
+            Mock -CommandName 'Remove-DscConfigurationDocument'
+            Mock -CommandName 'Stop-DscConfiguration'
+        }
 
-#                 Assert-MockCalled -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
-#                     $Stage -eq 'Previous'
-#                 } -Exactly -Times 1 -Scope It
-#             }
-#         }
-#     }
+        It 'Should reset the LCM without throwing' -Skip:($PSVersionTable.PSVersion.Major -gt 5 ) {
+            InModuleScope -ScriptBlock {
+                Set-StrictMode -Version 1.0
 
-# }
+                { Clear-DscLcmConfiguration } | Should -Not -Throw
+            }
+
+            Should -Invoke -CommandName 'Stop-DscConfiguration' -Exactly -Times 1 -Scope It
+            Should -Invoke -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
+                $Stage -eq 'Current'
+            } -Exactly -Times 1 -Scope It
+
+            Should -Invoke -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
+                $Stage -eq 'Pending'
+            } -Exactly -Times 1 -Scope It
+
+            Should -Invoke -CommandName 'Remove-DscConfigurationDocument' -ParameterFilter {
+                $Stage -eq 'Previous'
+            } -Exactly -Times 1 -Scope It
+        }
+    }
+}

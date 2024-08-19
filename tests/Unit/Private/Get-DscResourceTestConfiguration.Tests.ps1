@@ -68,8 +68,9 @@ Describe 'Get-DscResourceTestConfiguration' {
 
             $null = Get-DscResourceTestConfiguration -Configuration @{ }
         }
-        Assert-MockCalled -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a Dictionary' }
-        Assert-MockCalled -CommandName ConvertTo-OrderedDictionary -Scope It
+
+        Should -Invoke -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a Dictionary' }
+        Should -Invoke -CommandName ConvertTo-OrderedDictionary -Scope It
     }
 
     It 'Should have correct code path when passing PSCustomObject' {
@@ -78,8 +79,9 @@ Describe 'Get-DscResourceTestConfiguration' {
 
             $null = Get-DscResourceTestConfiguration -Configuration ([PSCustomObject]@{ })
         }
-        Assert-MockCalled -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a PSCustomObject' }
-        Assert-MockCalled -CommandName ConvertTo-OrderedDictionary -Scope It
+
+        Should -Invoke -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a PSCustomObject' }
+        Should -Invoke -CommandName ConvertTo-OrderedDictionary -Scope It
     }
 
     It 'Should have correct code path when passing a path' {
@@ -88,9 +90,10 @@ Describe 'Get-DscResourceTestConfiguration' {
 
             $null = Get-DscResourceTestConfiguration -Configuration 'TestDrive:\.MetaOptIn.json'
         }
-        Assert-MockCalled -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a String, probably a Path' }
-        Assert-MockCalled -CommandName Get-StructuredObjectFromFile -Scope It
-        Assert-MockCalled -CommandName ConvertTo-OrderedDictionary -Scope It
+
+        Should -Invoke -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a String, probably a Path' }
+        Should -Invoke -CommandName Get-StructuredObjectFromFile -Scope It
+        Should -Invoke -CommandName ConvertTo-OrderedDictionary -Scope It
     }
 
     It 'Should use MetaOptIn file by default' {
@@ -99,9 +102,10 @@ Describe 'Get-DscResourceTestConfiguration' {
 
             $null = Get-DscResourceTestConfiguration
         }
-        Assert-MockCalled -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a String, probably a Path' }
-        Assert-MockCalled -CommandName Get-StructuredObjectFromFile -Scope It
-        Assert-MockCalled -CommandName ConvertTo-OrderedDictionary -Scope It
+        
+        Should -Invoke -CommandName Write-Debug -Scope it -ParameterFilter { $message -eq 'Configuration Object is a String, probably a Path' }
+        Should -Invoke -CommandName Get-StructuredObjectFromFile -Scope It
+        Should -Invoke -CommandName ConvertTo-OrderedDictionary -Scope It
     }
 
     It 'Should throw when called passing int' {

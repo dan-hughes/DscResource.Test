@@ -71,7 +71,8 @@ Describe 'Get-StructuredObjectFromFiles' {
 
             $null = Get-StructuredObjectFromFile -Path 'TestDrive:\tests.psd1'
         }
-        Assert-MockCalled -CommandName Import-PowerShellDataFile -Scope it
+
+        Should -Invoke -CommandName Import-PowerShellDataFile -Scope it
     }
 
 
@@ -81,7 +82,7 @@ Describe 'Get-StructuredObjectFromFiles' {
 
     #     $null = Get-StructuredObjectFromFile -Path 'TestDrive:\tests.json'
     #  }
-    #     Assert-MockCalled -CommandName ConvertFrom-Json -Scope it
+    #     Should -Invoke -CommandName ConvertFrom-Json -Scope it
     # }
 
     It 'Should Import module & ConvertFrom-Yaml when path extension is Yaml' {
@@ -90,8 +91,9 @@ Describe 'Get-StructuredObjectFromFiles' {
 
             $null = Get-StructuredObjectFromFile -Path 'TestDrive:\tests.yaml'
         }
-        Assert-MockCalled -CommandName Import-Module -Scope it
-        Assert-MockCalled -CommandName ConvertFrom-Yaml -Scope It
+        
+        Should -Invoke -CommandName Import-Module -Scope it
+        Should -Invoke -CommandName ConvertFrom-Yaml -Scope It
     }
 
 
