@@ -1,36 +1,76 @@
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Suppressing this rule because Script Analyzer does not understand Pester's syntax.
+[System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+param ()
 
-# Convert-path required for PS7 or Join-Path fails
-$ProjectPath = "$here\..\.." | Convert-Path
-$ProjectName = (Get-ChildItem $ProjectPath\*\*.psd1 | Where-Object {
-    ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
-        $(try
+BeforeDiscovery {
+    try
+    {
+        if (-not (Get-Module -Name 'DscResource.Test'))
+        {
+            # Assumes dependencies has been resolved, so if this module is not available, run 'noop' task.
+            if (-not (Get-Module -Name 'DscResource.Test' -ListAvailable))
             {
-                Test-ModuleManifest $_.FullName -ErrorAction Stop
+                # Redirect all streams to $null, except the error stream (stream 2)
+                & "$PSScriptRoot/../../build.ps1" -Tasks 'noop' 2>&1 4>&1 5>&1 6>&1 > $null
             }
-            catch
-            {
-                $false
-            }) }
-).BaseName
 
-$SourcePath = (Get-ChildItem $ProjectPath\*\*.psd1 | Where-Object {
-        ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
-        $(try
-            {
-                Test-ModuleManifest $_.FullName -ErrorAction Stop
-            }
-            catch
-            {
-                $false
-            }) }
-).Directory.FullName
+            # If the dependencies has not been resolved, this will throw an error.
+            Import-Module -Name 'DscResource.Test' -Force -ErrorAction 'Stop'
+        }
+    }
+    catch [System.IO.FileNotFoundException]
+    {
+        throw 'DscResource.Test module dependency not found. Please run ".\build.ps1 -ResolveDependency -Tasks build" first.'
+    }
 
-$mut = Import-Module -Name $ProjectName -ErrorAction Stop -PassThru -Force
-$allModuleFunctions = &$mut { Get-Command -Module $args[0] -CommandType Function } $ProjectName
+    $allModuleFunctions = Get-Command -Module 'DscResource.Test' -CommandType Function
+}
+
+BeforeAll {
+    $script:moduleName = 'DscResource.Test'
+
+    # Make sure there are not other modules imported that will conflict with mocks.
+    Get-Module -Name $script:moduleName -All | Remove-Module -Force
+
+    # Re-import the module using force to get any code changes between runs.
+    Import-Module -Name $script:moduleName -Force -ErrorAction 'Stop'
+
+    $PSDefaultParameterValues['InModuleScope:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Mock:ModuleName'] = $script:moduleName
+    $PSDefaultParameterValues['Should:ModuleName'] = $script:moduleName
+
+    #$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+    # Convert-path required for PS7 or Join-Path fails
+    $script:ProjectPath = "$PSScriptRoot\..\.." | Convert-Path
+
+    # $SourcePath = (Get-ChildItem $ProjectPath\*\*.psd1 | Where-Object {
+    #     ($_.Directory.Name -match 'source|src' -or $_.Directory.Name -eq $_.BaseName) -and
+    #         $(try
+    #             {
+    #                 Test-ModuleManifest $_.FullName -ErrorAction Stop
+    #             }
+    #             catch
+    #             {
+    #                 $false
+    #             }) }
+    # ).Directory.FullName
+
+    # $ProjectName = 'DscResource.Test'
+    #$mut = Import-Module -Name $ProjectName -ErrorAction Stop -PassThru -Force
+
+}
+
+AfterAll {
+    $PSDefaultParameterValues.Remove('Mock:ModuleName')
+    $PSDefaultParameterValues.Remove('InModuleScope:ModuleName')
+    $PSDefaultParameterValues.Remove('Should:ModuleName')
+
+    Remove-Module -Name $script:moduleName
+}
 
 Describe 'Changelog Management' -Tag 'Changelog' {
-    It 'Changelog has been updated' -skip:(
+    It 'Should be updated' -skip:(
         !([bool](Get-Command git -EA SilentlyContinue) -and
             [bool](&(Get-Process -id $PID).Path -NoProfile -Command 'git rev-parse --is-inside-work-tree 2>$null'))
     ) {
@@ -46,93 +86,102 @@ Describe 'Changelog Management' -Tag 'Changelog' {
         }
     }
 
-    It 'Changelog format compliant with keepachangelog format' -skip:(![bool](Get-Command git -EA SilentlyContinue)) {
-        { Get-ChangelogData (Join-Path $ProjectPath 'CHANGELOG.md') -ErrorAction Stop } | Should -Not -Throw
+    It 'Should have a format compliant with keepachangelog format' -skip:(![bool](Get-Command git -EA SilentlyContinue)) {
+        { Get-ChangelogData (Join-Path $script:ProjectPath 'CHANGELOG.md') -ErrorAction Stop } | Should -Not -Throw
     }
 
-    It 'Changelog should have an Unreleased header' -Skip:$skipTest {
-            (Get-ChangelogData -Path (Join-Path -Path $ProjectPath -ChildPath 'CHANGELOG.md') -ErrorAction 'Stop').Unreleased.RawData | Should -Not -BeNullOrEmpty
+    It 'Should have an Unreleased header' {
+        (Get-ChangelogData -Path (Join-Path -Path $script:ProjectPath -ChildPath 'CHANGELOG.md') -ErrorAction 'Stop').Unreleased.RawData | Should -Not -BeNullOrEmpty
     }
 }
 
 Describe 'General module control' -Tags 'FunctionalQuality' {
-
-    It 'imports without errors' {
-        { Import-Module -Name $ProjectName -Force -ErrorAction Stop } | Should -Not -Throw
-        Get-Module $ProjectName | Should -Not -BeNullOrEmpty
+    AfterAll {
+        #Re-Import the module for the remaining tests
+        Import-Module -Name $script:moduleName -Force
     }
 
-    It 'Removes without error' {
-        { Remove-Module -Name $ProjectName -ErrorAction Stop } | Should -not -Throw
-        Get-Module $ProjectName | Should -beNullOrEmpty
+    It 'Should import without errors' {
+        { Import-Module -Name $script:moduleName -Force -ErrorAction Stop } | Should -Not -Throw
+        Get-Module $script:moduleName | Should -Not -BeNullOrEmpty
     }
-}
 
-if (Get-Command Invoke-ScriptAnalyzer -ErrorAction SilentlyContinue)
-{
-    $scriptAnalyzerRules = Get-ScriptAnalyzerRule
-}
-else
-{
-    if ($ErrorActionPreference -ne 'Stop')
-    {
-        Write-Warning "ScriptAnalyzer not found!"
-    }
-    else
-    {
-        Throw "ScriptAnalyzer not found!"
+    It 'Should remove without error' {
+        { Remove-Module -Name $script:moduleName -ErrorAction Stop } | Should -Not -Throw
+        Get-Module $script:moduleName | Should -BeNullOrEmpty
     }
 }
 
-foreach ($function in $allModuleFunctions)
-{
-    $functionFile = Get-ChildItem -path $SourcePath -Recurse -Include "$($function.Name).ps1"
-    Describe "Quality for $($function.Name)" -Tags 'TestQuality' {
-        It "$($function.Name) has a unit test" {
-            Get-ChildItem "tests\" -recurse -include "$($function.Name).Tests.ps1" | Should Not BeNullOrEmpty
+Describe 'Function Tests' {
+    Context 'When running tests for <_.Name>' -ForEach $allModuleFunctions {
+        BeforeAll {
+            $script:functionFile = Get-ChildItem -Path $script:ProjectPath -Recurse -Include "$($_.Name).ps1"
         }
 
-        if ($scriptAnalyzerRules)
-        {
-            It "Script Analyzer for $($functionFile.FullName)" {
-                $PSSAResult = (Invoke-ScriptAnalyzer -Path $functionFile.FullName)
+        Context 'When running quality tests' -Tags 'TestQuality' {
+            BeforeDiscovery {
+                if (Get-Command Invoke-ScriptAnalyzer -ErrorAction SilentlyContinue)
+                {
+                    $scriptAnalyzerRules = Get-ScriptAnalyzerRule
+                    $skipScriptAnalyzerRules = $false
+                }
+
+                if (-not $scriptAnalyzerRules)
+                {
+                    $skipScriptAnalyzerRules = $true
+                }
+            }
+
+            It 'Should have a unit test file' {
+                Get-ChildItem "..\" -Recurse -Include "$($_.Name).Tests.ps1" | Should -Not -BeNullOrEmpty
+            }
+
+            It 'Should pass Script Analyzer' -Skip:$skipScriptAnalyzerRules {
+                $PSSAResult = (Invoke-ScriptAnalyzer -Path $script:functionFile.FullName)
                 $Report = $PSSAResult | Format-Table -AutoSize | Out-String -Width 110
+
                 $PSSAResult  | Should -BeNullOrEmpty -Because `
                     "some rule triggered.`r`n`r`n $Report"
             }
-
-        }
-    }
-
-    Describe "Help for $($function.Name)" -Tags 'helpQuality' {
-        $AbstractSyntaxTree = [System.Management.Automation.Language.Parser]::
-        ParseInput((Get-Content -raw $functionFile.FullName), [ref]$null, [ref]$null)
-        $AstSearchDelegate = { $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }
-        $ParsedFunction = $AbstractSyntaxTree.FindAll( $AstSearchDelegate, $true ) |
-            Where-Object Name -eq $function.Name
-
-        $FunctionHelp = $ParsedFunction.GetHelpContent()
-
-        It 'Has a SYNOPSIS' {
-            $FunctionHelp.Synopsis | should not BeNullOrEmpty
         }
 
-        It 'Has a Description, with length > 40' {
-            $FunctionHelp.Description.Length | Should beGreaterThan 40
-        }
+        Context 'When running help tests' -Tags 'helpQuality' {
+            BeforeDiscovery {
+                $discoveryFile = Get-ChildItem -Path ("$PSScriptRoot\..\.." | Convert-Path) -Recurse -Include "$($_.Name).ps1"
+                $AbstractSyntaxTree = [System.Management.Automation.Language.Parser]::ParseInput((Get-Content -raw $discoveryFile.FullName), [ref]$null, [ref]$null)
+                $AstSearchDelegate = { $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }
+                $ParsedFunction = $AbstractSyntaxTree.FindAll( $AstSearchDelegate, $true ) |
+                    Where-Object Name -eq $_.Name
 
-        It 'Has at least 1 example' {
-            $FunctionHelp.Examples.Count | Should beGreaterThan 0
-            $FunctionHelp.Examples[0] | Should match ([regex]::Escape($function.Name))
-            $FunctionHelp.Examples[0].Length | Should BeGreaterThan ($function.Name.Length + 10)
-        }
+                $parameters = $ParsedFunction.Body.ParamBlock.Parameters.name.VariablePath.foreach{ $_.ToString() }
+            }
 
-        $parameters = $ParsedFunction.Body.ParamBlock.Parameters.name.VariablePath.Foreach{ $_.ToString() }
-        foreach ($parameter in $parameters)
-        {
-            It "Has help for Parameter: $parameter" {
-                $FunctionHelp.Parameters.($parameter.ToUpper()) | Should Not BeNullOrEmpty
-                $FunctionHelp.Parameters.($parameter.ToUpper()).Length | Should BeGreaterThan 25
+            BeforeAll {
+                $AbstractSyntaxTree = [System.Management.Automation.Language.Parser]::ParseInput((Get-Content -raw $script:functionFile.FullName), [ref]$null, [ref]$null)
+                $AstSearchDelegate = { $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }
+                $ParsedFunction = $AbstractSyntaxTree.FindAll( $AstSearchDelegate, $true ) |
+                    Where-Object Name -eq $_.Name
+
+                $script:FunctionHelp = $ParsedFunction.GetHelpContent()
+            }
+
+            It 'Should have a SYNOPSIS' {
+                $script:FunctionHelp.Synopsis | Should -Not -BeNullOrEmpty
+            }
+
+            It 'Should have a DESCRIPTION, with length > 40' {
+                $script:FunctionHelp.Description.Length | Should -BeGreaterThan 40
+            }
+
+            It 'Should have at least 1 EXAMPLE' {
+                $script:FunctionHelp.Examples.Count | Should -BeGreaterThan 0
+                $script:FunctionHelp.Examples[0] | Should -Match ($_.Name)
+                $script:FunctionHelp.Examples[0].Length | Should -BeGreaterThan ($_.Name.Length + 10)
+            }
+
+            It 'Has help for PARAMETER: <_>' -TestCases $parameters {
+                $script:FunctionHelp.Parameters.($_.ToUpper()) | Should -Not -BeNullOrEmpty
+                $script:FunctionHelp.Parameters.($_.ToUpper()).Length | Should -BeGreaterThan 25
             }
         }
     }
