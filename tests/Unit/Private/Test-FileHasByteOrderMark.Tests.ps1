@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Test-FileHasByteOrderMark' {
+Describe 'Private\Test-FileHasByteOrderMark' -Tag 'Private' {
     Context 'When a file has Byte Order Mark (BOM)' {
         BeforeAll {
             InModuleScope -ScriptBlock {

@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-FileParseErrors' {
+Describe 'Private\Get-FileParseErrors' -Tag 'Private' {
     BeforeAll {
         InModuleScope -ScriptBlock {
             Set-StrictMode -Version 1.0

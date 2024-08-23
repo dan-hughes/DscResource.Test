@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-ClassResourceNameFromFile' {
+Describe 'Private\Get-ClassResourceNameFromFile' -Tag 'Private' {
     BeforeAll {
         InModuleScope -ScriptBlock {
             Set-StrictMode -Version 1.0

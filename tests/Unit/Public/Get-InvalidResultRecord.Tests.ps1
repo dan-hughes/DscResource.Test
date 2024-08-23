@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Public\Get-InvalidResultRecord' {
+Describe 'Public\Get-InvalidResultRecord' -Tag 'Public' {
     Context 'When calling with the parameter Message' {
         It 'Should have the correct values in the error record' {
             InModuleScope -ScriptBlock {

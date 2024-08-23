@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-StructuredObjectFromFiles' {
+Describe 'Private\Get-StructuredObjectFromFiles' -Tag 'Private' {
     BeforeAll {
         Mock -CommandName Import-PowerShellDataFile
         Mock -CommandName Get-Content

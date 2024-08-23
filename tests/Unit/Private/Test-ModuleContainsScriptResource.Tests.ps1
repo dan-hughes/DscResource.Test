@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Test-ModuleContainsScriptResource' {
+Describe 'Private\Test-ModuleContainsScriptResource' -Tag 'Private' {
     Context 'When a module contains script resources' {
         BeforeAll {
             InModuleScope -ScriptBlock {

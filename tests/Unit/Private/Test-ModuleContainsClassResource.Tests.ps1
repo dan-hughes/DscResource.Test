@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Test-ModuleContainsClassResource' {
+Describe 'Private\Test-ModuleContainsClassResource' -Tag 'Private' {
     BeforeAll {
         $filePath = (Join-Path -Path $TestDrive -ChildPath 'test.psm1')
         'testfile' | Out-File -FilePath $filePath -Encoding ascii

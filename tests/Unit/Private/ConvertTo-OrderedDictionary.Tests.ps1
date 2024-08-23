@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\ConvertTo-OrderedDictionary' {
+Describe 'Private\ConvertTo-OrderedDictionary' -Tag 'Private' {
     It 'Should convert simple PSCustomObject' {
         InModuleScope -ScriptBlock {
             Set-StrictMode -Version 1.0

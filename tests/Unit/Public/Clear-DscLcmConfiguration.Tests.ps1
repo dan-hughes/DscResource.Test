@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Public\Clear-DscLcmConfiguration' {
+Describe 'Public\Clear-DscLcmConfiguration' -Tag 'Public' {
     Context 'When clearing the DSC LCM' {
         BeforeAll {
             Mock -CommandName 'Remove-DscConfigurationDocument'

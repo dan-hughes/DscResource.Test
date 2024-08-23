@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-SystemExceptionRecord' {
+Describe 'Private\Get-SystemExceptionRecord' -Tag 'Private' {
     Context 'When calling with the parameter Message' {
         It 'Should have the correct values in the error record' {
             InModuleScope -ScriptBlock {

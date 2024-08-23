@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Public\Get-DscResourceTestContainer' {
+Describe 'Public\Get-DscResourceTestContainer' -Tag 'Public' {
     BeforeAll {
         InModuleScope -ScriptBlock {
             Set-StrictMode -Version 1.0

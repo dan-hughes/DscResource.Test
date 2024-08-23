@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Test-TestShouldBeSkipped' {
+Describe 'Private\Test-TestShouldBeSkipped' -Tag 'Private' {
     BeforeDiscovery {
         #Skip if any TestNames is excluded or TAG is used and not in the TestNames
         $Cases = @(

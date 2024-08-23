@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-CurrentModuleBase' {
+Describe 'Private\Get-CurrentModuleBase' -Tag 'Private' {
     It 'Should return the path of the loaded module' {
         InModuleScope -ScriptBlock {
             Set-StrictMode -Version 1.0

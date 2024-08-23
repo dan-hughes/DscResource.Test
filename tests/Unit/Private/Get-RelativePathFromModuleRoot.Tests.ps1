@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-RelativePathFromModuleRoot' {
+Describe 'Private\Get-RelativePathFromModuleRoot' -Tag 'Private' {
     Context 'When to get the relative path from module root' {
         BeforeAll {
             InModuleScope -ScriptBlock {

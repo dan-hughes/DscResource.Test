@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Set-EnvironmentVariable' {
+Describe 'Private\Set-EnvironmentVariable' -Tag 'Private' {
     It 'Should be tested' {
 
     }

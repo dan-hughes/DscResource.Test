@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Initialize-TestEnvironment' {
+Describe 'Initialize-TestEnvironment' -Tag 'Public' {
     BeforeAll {
         if ($script:machineOldPSModulePath)
         {

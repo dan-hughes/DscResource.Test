@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Test-FileInUnicode' {
+Describe 'Private\Test-FileInUnicode' -Tag 'Private' {
     Context 'When a file is unicode' {
         BeforeAll {
             InModuleScope -ScriptBlock {

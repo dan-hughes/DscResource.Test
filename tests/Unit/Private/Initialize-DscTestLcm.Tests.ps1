@@ -63,7 +63,7 @@ AfterAll {
     Remove-Module -Name 'DscResource.Test.Stubs' -Force -ErrorAction 'SilentlyContinue'
 }
 
-Describe 'Private\Initialize-DscTestLcm' {
+Describe 'Private\Initialize-DscTestLcm' -Tag 'Private' {
     BeforeAll {
         Mock -CommandName New-Item
         Mock -CommandName Remove-Item

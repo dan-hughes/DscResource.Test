@@ -46,7 +46,7 @@ AfterAll {
     Remove-Module -Name $script:moduleName
 }
 
-Describe 'Private\Get-DscResourceTestConfiguration' {
+Describe 'Private\Get-DscResourceTestConfiguration' -Tag 'Private' {
     BeforeAll {
         Mock Get-StructuredObjectFromFile -MockWith { Param($Path) $Path }
         Mock ConvertTo-OrderedDictionary -MockWith { Param($Configuration) $Configuration }
