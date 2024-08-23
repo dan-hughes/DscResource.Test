@@ -125,8 +125,6 @@ Pester:
       OutputFormat: NUnitXML
       OutputEncoding: acsii
   ExcludeTag:
-    - helpQuality
-    - testQuality
   ExcludeSourceFile:
     - source/potential
   ExcludeFromCodeCoverage:
