@@ -65,7 +65,7 @@ AfterAll {
     Remove-Module -Name 'DscResource.Test.Stubs' -Force -ErrorAction 'SilentlyContinue'
 }
 
-Describe 'Public\Wait-ForIdleLcm' {
+Describe 'Public\Wait-ForIdleLcm' -Tag 'Public' {
     Context 'When the LCM is idle' {
         BeforeAll {
             Mock -CommandName Start-Sleep
