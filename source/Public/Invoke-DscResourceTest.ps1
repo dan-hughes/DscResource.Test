@@ -356,7 +356,7 @@ function Invoke-DscResourceTest
         {
             if (
                 -not $PSBoundParameters.ContainsKey($paramName) `
-                -and ($paramValue = $Settings.($paramName))
+                -and ($paramValue -eq $Settings.($paramName))
             )
             {
                 Write-Verbose -Message "Adding setting $paramName."

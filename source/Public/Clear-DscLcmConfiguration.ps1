@@ -18,6 +18,9 @@
         test to ensure the DSC LCM is reset before another test DSC configuration
         is applied.
 
+    .DESCRIPTION
+        This is a dummy description to test whether the unit test is working out the length of the description.
+
     .EXAMPLE
         Clear-DscLcmConfiguration
 

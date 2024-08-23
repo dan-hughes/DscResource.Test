@@ -17,6 +17,9 @@
 #>
 function New-DscSelfSignedCertificate
 {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param ()
+
     $dscPublicCertificatePath = Join-Path -Path $env:temp -ChildPath 'DscPublicKey.cer'
 
     $certificateSubject = 'TestDscEncryptionCert'
