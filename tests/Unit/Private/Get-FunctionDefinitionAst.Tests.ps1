@@ -54,7 +54,6 @@ Describe 'Private\Get-FunctionDefinitionAst' -Tag 'Private' {
             $script:mockScriptPath = Join-Path -Path $TestDrive -ChildPath 'TestFunctions.ps1'
         }
     }
-
     Context 'When a script file has function definitions' {
         BeforeAll {
             InModuleScope -ScriptBlock {
@@ -113,6 +112,44 @@ Describe 'Private\Get-FunctionDefinitionAst' -Tag 'Private' {
 
                 $result = Get-FunctionDefinitionAst -FullName $script:mockScriptPath
                 $result | Should -BeNullOrEmpty
+            }
+        }
+    }
+
+    Context 'When a script file has a parse error' {
+        BeforeAll {
+            InModuleScope -ScriptBlock {
+                Set-StrictMode -Version 1.0
+
+                $definition = '
+                    function Get-Something
+                    {
+                        return "test1"
+                    }
+
+                    function Get-SomethingElse
+                    {
+                        param
+                        (
+                            [Parameter()]
+                            [System.String]
+                            Param1
+                        )
+
+                        return $Param1
+                    }
+                '
+
+                $definition | Out-File -FilePath $script:mockScriptPath -Encoding 'ascii' -Force
+            }
+        }
+
+        It 'Should throw' {
+            InModuleScope -ScriptBlock {
+                Set-StrictMode -Version 1.0
+
+                { Get-FunctionDefinitionAst -FullName $script:mockScriptPath } | Should -Throw
+
             }
         }
     }
