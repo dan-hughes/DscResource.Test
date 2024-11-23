@@ -166,15 +166,15 @@ Invoke-Pester -Container $container -Output Detailed
 Returns a container for each available HQRM test script using the provided
 values as script parameters. Then Pester is invoked on the containers.
 
-### `Get-InvalidOperationRecord`
+### `Get-InvalidArgumentRecord`
 
-Returns an invalid operation exception object.
+Returns an invalid argument exception object.
 
 #### Syntax
 
 <!-- markdownlint-disable MD013 - Line length -->
 ```plaintext
-Get-InvalidOperationRecord [-Message] <string> [[-ErrorRecord] <ErrorRecord>] [<CommonParameters>]
+Get-InvalidArgumentRecord [-Message] <string> [-ArgumentName] <string> [<CommonParameters>]
 ```
 <!-- markdownlint-enable MD013 - Line length -->
 
@@ -185,8 +185,35 @@ Get-InvalidOperationRecord [-Message] <string> [[-ErrorRecord] <ErrorRecord>] [<
 #### Example
 
 ```powershell
-$mockErrorRecord = Get-InvalidOperationRecord -Message (
-    $script:localizedData.FailedToRename -f $name
+$errorRecord = Get-InvalidArgumentRecord `
+    -Message ($script:localizedData.InterfaceNotAvailableError -f $interfaceAlias) `
+    -ArgumentName 'Interface'
+```
+
+This will return an error record with the localized string as the exception
+message.
+
+### `Get-InvalidResultRecord`
+
+Returns an invalid result exception object.
+
+#### Syntax
+
+<!-- markdownlint-disable MD013 - Line length -->
+```plaintext
+Get-InvalidResultRecord [-Message] <string> [[-ErrorRecord] <ErrorRecord>] [<CommonParameters>]
+```
+<!-- markdownlint-enable MD013 - Line length -->
+
+#### Outputs
+
+**System.Object**
+
+#### Example
+
+```powershell
+$mockErrorRecord = Get-InvalidResultRecord -Message (
+    $script:localizedData.FailedToGetAllFromName -f $name
 )
 ```
 
@@ -196,12 +223,12 @@ message.
 ```powershell
 try
 {
-    # Something that tries an operation.
+    # Something that tries to return an expected result.
 }
 catch
 {
-    $mockErrorRecord = Get-InvalidOperationRecord -ErrorRecord $_ -Message (
-        $script:localizedData.FailedToRename -f $name
+    $mockErrorRecord = Get-InvalidResultRecord -ErrorRecord $_ -Message (
+        $script:localizedData.FailedToGetAllFromName -f $name
     )
 }
 ```
@@ -909,8 +936,8 @@ Invoke-Pester -Container $container -Output Detailed
 
 <!-- markdownlint-disable MD013 - Line length -->
 ```plaintext
- [-ModuleBase] <String> [[-SourcePath] <String>] [[-ExcludeModuleFile] <String[]>] 
-   [[-ExcludeSourceFile] <String[]>] [[-Args] <Object>] [<CommonParameters>]
+  [-ModuleBase] <String> [[-ExcludeModuleFile] <String[]>]  [[-ProjectPath] <String[]>]
+  [[-Args] <Object>] [<CommonParameters>]
 ```
 <!-- markdownlint-enable MD013 - Line length -->
 
@@ -920,12 +947,6 @@ Any path or part of a path that will be excluded from the list of files
 gathered by the test from the path specified in the parameter `ModuleBase`.
 Default no files will be excluded from the test.
 
-##### ExcludeSourceFile
-
-Any path or part of a path that will be excluded from the list of files
-gathered by the test from the path specified in the parameter `SourcePath`.
-Default no files will be excluded from the test.
-
 ##### ModuleBase
 
 The path to the root of built module, e.g. `./output/FileSystemDsc/1.2.0`.
@@ -933,9 +954,10 @@ The path to the root of built module, e.g. `./output/FileSystemDsc/1.2.0`.
 If using the build task the default value for this parameter will be set
 to the value that comes from the pipeline.
 
-##### SourcePath
+##### ProjectPath
 
-The path to the source folder of the project, e.g. `./source`.
+The path to the root of the project, for example the root of the local
+Git repository.
 
 If using the build task the default value for this parameter will be set
 to the value that comes from the pipeline.
@@ -948,9 +970,48 @@ $pathToHQRMTests = Join-Path -Path (Get-Module DscResource.Test).ModuleBase -Chi
 
 $container = New-PesterContainer -Path "$pathToHQRMTests/Localization.common.*.Tests.ps1" -Data @{
     ModuleBase = "./output/$dscResourceModuleName/*"
-    # SourcePath = './source'
     # ExcludeModuleFile = @('Modules/DscResource.Common')
-    # ExcludeSourceFile = @('Examples')
+    # ProjectPath = '.'
+}
+
+Invoke-Pester -Container $container -Output Detailed
+```
+
+### Localization.builtModule
+
+#### Parameters
+
+<!-- markdownlint-disable MD013 - Line length -->
+```plaintext
+  [-ModuleBase] <String> [[-ProjectPath] <String[]>]
+  [[-Args] <Object>] [<CommonParameters>]
+```
+<!-- markdownlint-enable MD013 - Line length -->
+
+##### ModuleBase
+
+The path to the root of built module, e.g. `./output/FileSystemDsc/1.2.0`.
+
+If using the build task the default value for this parameter will be set
+to the value that comes from the pipeline.
+
+##### ProjectPath
+
+The path to the root of the project, for example the root of the local
+Git repository.
+
+If using the build task the default value for this parameter will be set
+to the value that comes from the pipeline.
+
+#### Example
+
+```powershell
+$dscResourceModuleName = 'FileSystemDsc'
+$pathToHQRMTests = Join-Path -Path (Get-Module DscResource.Test).ModuleBase -ChildPath 'Tests\QA'
+
+$container = New-PesterContainer -Path "$pathToHQRMTests/Localization.builtModule.*.Tests.ps1" -Data @{
+    ModuleBase = "./output/$dscResourceModuleName/*"
+    # ProjectPath = '.'
 }
 
 Invoke-Pester -Container $container -Output Detailed
@@ -963,16 +1024,9 @@ Invoke-Pester -Container $container -Output Detailed
 <!-- markdownlint-disable MD013 - Line length -->
 ```plaintext
 [-ProjectPath] <String> [-ModuleBase] <String> [[-SourcePath] <String>] 
-  [[-ExcludeModuleFile] <String[]>] [[-ExcludeSourceFile] <String[]>] 
-  [[-Args] <Object>] [<CommonParameters>]
+  [[-ExcludeSourceFile] <String[]>] [[-Args] <Object>] [<CommonParameters>]
 ```
 <!-- markdownlint-enable MD013 - Line length -->
-
-##### ExcludeModuleFile
-
-Any path or part of a path that will be excluded from the list of files
-gathered by the test from the path specified in the parameter `ModuleBase`.
-Default no files will be excluded from the test.
 
 ##### ExcludeSourceFile
 
@@ -1010,7 +1064,6 @@ $container = New-PesterContainer -Path "$pathToHQRMTests/MarkdownLinks.common.*.
     $ProjectPath = '.'
     ModuleBase = "./output/$dscResourceModuleName/*"
     # SourcePath = './source'
-    # ExcludeModuleFile = @('Modules/DscResource.Common')
     # ExcludeSourceFile = @('Examples')
 }
 
@@ -1126,16 +1179,9 @@ Invoke-Pester -Container $container -Output Detailed
 <!-- markdownlint-disable MD013 - Line length -->
 ```plaintext
 [-ProjectPath] <String> [-ModuleBase] <String> [[-SourcePath] <String>]
-  [[-ExcludeModuleFile] <String[]>] [[-ExcludeSourceFile] <String[]>] 
-  [[-Args] <Object>] [<CommonParameters>]
+  [[-ExcludeSourceFile] <String[]>] [[-Args] <Object>] [<CommonParameters>]
 ```
 <!-- markdownlint-enable MD013 - Line length -->
-
-##### ExcludeModuleFile
-
-Any path or part of a path that will be excluded from the list of files
-gathered by the test from the path specified in the parameter `ModuleBase`.
-Default no files will be excluded from the test.
 
 ##### ExcludeSourceFile
 
@@ -1173,7 +1219,6 @@ $container = New-PesterContainer -Path "$pathToHQRMTests/PSSAResource.common.*.T
     ProjectPath = '.'
     ModuleBase = "./output/$dscResourceModuleName/*"
     # SourcePath = './source'
-    # ExcludeModuleFile = @('Modules/DscResource.Common')
     # ExcludeSourceFile = @('Examples')
 }
 
